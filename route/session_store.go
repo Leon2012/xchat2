@@ -27,4 +27,5 @@ func (s *sessionStore) Put(uid int64, sid int32) {
 	if session, ok = s.sessions[uid]; !ok {
 		s.sessions[uid] = newSession()
 	}
+
 }
