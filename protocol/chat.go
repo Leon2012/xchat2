@@ -27,6 +27,15 @@ type MsgServerInfo struct {
 	SeqId int `json:"seq,omitempty"`
 }
 
+type MsgServerData struct {
+	Topic string `json:"topic"`
+	// ID of the user who originated the message as {pub}, could be empty if sent by the system
+	From      string      `json:"from,omitempty"`
+	Timestamp time.Time   `json:"ts"`
+	SeqId     int         `json:"seq"`
+	Content   interface{} `json:"content"`
+}
+
 /////////////////////////////////////////////////////////////client/////////////////////////////////////////////////////////////////////////////////
 // Handshake {hi} message
 type MsgClientHi struct {
