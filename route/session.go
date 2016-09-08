@@ -9,3 +9,8 @@ type session struct {
 func newSession() *session {
 	return &session{}
 }
+
+func (s *session) Put(uid int64, sid int32) {
+	s.uid = uid
+	s.sid = sid
+}

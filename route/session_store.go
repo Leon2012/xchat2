@@ -25,7 +25,8 @@ func (s *sessionStore) Put(uid int64, sid int32) {
 	s.rw.Lock()
 	defer s.rw.Unlock()
 	if session, ok = s.sessions[uid]; !ok {
-		s.sessions[uid] = newSession()
+		session = newSession()
 	}
-
+	session.Put(uid, sid)
+	s.sessions[uid] = session
 }
