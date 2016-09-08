@@ -17,6 +17,16 @@ func (jd *JsonDuration) UnmarshalJSON(data []byte) (err error) {
 type ServerComMessage struct {
 }
 
+type MsgServerInfo struct {
+	Topic string `json:"topic"`
+	// ID of the user who originated the message
+	From string `json:"from"`
+	// what is being reported: "rcpt" - message received, "read" - message read, "kp" - typing notification
+	What string `json:"what"`
+	// Server-issued message ID being reported
+	SeqId int `json:"seq,omitempty"`
+}
+
 /////////////////////////////////////////////////////////////client/////////////////////////////////////////////////////////////////////////////////
 // Handshake {hi} message
 type MsgClientHi struct {
