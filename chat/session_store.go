@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"sync"
 	"time"
 
+	"github.com/Leon2012/xchat2/protocol"
 	"github.com/gorilla/websocket"
 )
 
@@ -22,6 +24,8 @@ func newSessionStore(lifetime time.Duration) *SessionStore {
 }
 
 func (ss *SessionStore) Create(conn interface{}, sid string) *Session {
+	ss.rw.Lock()
+	defer ss.rw.Unlock()
 	var s Session
 	s.sid = sid
 	switch c := conn.(type) {
@@ -39,12 +43,36 @@ func (ss *SessionStore) Create(conn interface{}, sid string) *Session {
 	}
 	s.lastTouched = time.Now()
 	if s.sid == "" {
-		s.sid = ""
+		s.sid = globals.idGen.GetStr()
 	}
-
-	ss.rw.Lock()
 	ss.sessCache[s.sid] = &s
-	ss.rw.Unlock()
-
 	return &s
+}
+
+func (ss *SessionStore) Get(sid string) *Session {
+	ss.rw.Lock()
+	defer ss.rw.Unlock()
+
+	if s, ok := ss.sessCache[sid]; ok {
+		return s
+	}
+	return nil
+}
+
+func (ss *SessionStore) Delete(s *Session) {
+	ss.rw.Lock()
+	defer ss.rw.Unlock()
+	delete(ss.sessCache, s.sid)
+}
+
+func (ss *SessionStore) Shutdown() {
+	ss.rw.Lock()
+	defer ss.rw.Unlock()
+
+	shutdown, _ := json.Marshal(protocol.NoErrShutdown(time.Now().UTC().Round(time.Millisecond)))
+	for _, s := range ss.sessCache {
+		if s.send != nil {
+			s.send <- shutdown
+		}
+	}
 }

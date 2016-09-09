@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"net/http"
 	"strings"
 	"time"
 )
@@ -14,7 +15,15 @@ func (jd *JsonDuration) UnmarshalJSON(data []byte) (err error) {
 }
 
 ////////////////////////////////////////////////////////////server//////////////////////////////////////////////////////////////////////////////////
-type ServerComMessage struct {
+
+type MsgServerCtrl struct {
+	Id     string      `json:"id,omitempty"`
+	Topic  string      `json:"topic,omitempty"`
+	Params interface{} `json:"params,omitempty"`
+
+	Code      int       `json:"code"`
+	Text      string    `json:"text,omitempty"`
+	Timestamp time.Time `json:"ts"`
 }
 
 type MsgServerInfo struct {
@@ -36,6 +45,12 @@ type MsgServerData struct {
 	Content   interface{} `json:"content"`
 }
 
+type ServerComMessage struct {
+	Ctrl *MsgServerCtrl `json:"ctrl,omitempty"`
+	Info *MsgServerInfo `json:"info,omitempty"`
+	Data *MsgServerData `json:"data,omitempty"`
+}
+
 /////////////////////////////////////////////////////////////client/////////////////////////////////////////////////////////////////////////////////
 // Handshake {hi} message
 type MsgClientHi struct {
@@ -51,7 +66,30 @@ type MsgClientHi struct {
 
 type ClientComMessage struct {
 	// from: userid as string
-	from      string
-	timestamp time.Time
+	From      int64
+	Timestamp time.Time
 	Hi        *MsgClientHi `json:"hi"`
+}
+
+/////////////////////////////////////////////////////////////errors////////////////////////////////////////////////////////////////////////////////////
+
+func NoErrShutdown(ts time.Time) *ServerComMessage {
+	msg := &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Code:      http.StatusResetContent, // 205
+		Text:      "server shutdown",
+		Timestamp: ts}}
+	return msg
+}
+
+//3xx error
+
+// 4xx error
+func ErrMalformed(id, topic string, ts time.Time) *ServerComMessage {
+	msg := &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Id:        id,
+		Code:      http.StatusBadRequest, // 400
+		Text:      "malformed",
+		Topic:     topic,
+		Timestamp: ts}}
+	return msg
 }

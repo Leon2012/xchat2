@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"strconv"
 	"strings"
 
 	"github.com/Leon2012/xchat2/libs/config"
@@ -12,8 +11,10 @@ import (
 
 type Config struct {
 	Server struct {
-		Id      int
-		Addr   string
+		Id            int
+		Name          string
+		Addr          string
+		Encryptionkey string
 	}
 	Log struct {
 		Output string
@@ -23,6 +24,15 @@ type Config struct {
 	Rpc struct {
 		Addr string
 	}
+	Logic struct {
+		Addrs   []string
+		Servers []*Server
+	}
+}
+
+type Server struct {
+	Name string
+	Addr string
 }
 
 var (
@@ -47,5 +57,32 @@ func initConfig(cfgFile string) error {
 	if err != nil {
 		return err
 	}
+	cfg.Logic.Servers = parseServerAddrs(cfg.Logic.Addrs)
 	return nil
+}
+
+func reloadConfig() (*Config, error) {
+	newCfg := &Config{}
+	err := config.LoadConfigFromFile(cfgFile, newCfg)
+	if err != nil {
+		return nil, err
+	}
+	newCfg.Logic.Servers = parseServerAddrs(newCfg.Logic.Addrs)
+	cfg = newCfg
+	return newCfg, nil
+}
+
+func parseServerAddrs(addrs []string) []*Server {
+	var servers []*Server
+	for _, addr := range addrs {
+		info := strings.Split(addr, "|")
+		sname := info[0]
+		saddr := info[1]
+		server := &Server{
+			Name: sname,
+			Addr: saddr,
+		}
+		servers = append(servers, server)
+	}
+	return servers
 }

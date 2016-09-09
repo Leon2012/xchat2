@@ -1,5 +1,11 @@
 package main
 
+/*
+ * Created on Fri Sep 09 2016
+ *
+ * Copyright (c) 2016 Leon.peng@live.com
+ */
+
 import (
 	"flag"
 	"fmt"
@@ -7,16 +13,19 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/Leon2012/xchat2/libs/idgen"
 	"github.com/Leon2012/xchat2/libs/signal"
 )
 
 var buildstamp = ""
 var globals struct {
 	sessionStore *SessionStore
+	idGen        *idgen.IdGenerator
 }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+
 }
 
 func main() {
@@ -35,8 +44,13 @@ func main() {
 		os.Exit(-1)
 	}
 
+	globals.idGen = &idgen.IdGenerator{}
+	globals.idGen.Init(uint(cfg.Server.Id), []byte(cfg.Server.Encryptionkey))
+
 	globals.sessionStore = newSessionStore(15 * time.Second)
-	ws_init("", cfg.Server.Addr)
+	ws_init(cfg.Server.Name, cfg.Server.Addr)
+
+	appLogger.Info("websocket server start %s ", cfg.Server.Addr+"/chat")
 
 	signal.InitSignal()
 }

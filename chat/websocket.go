@@ -35,14 +35,15 @@ func ws_init(serverName, addr string) error {
 		httpServeMux = http.NewServeMux()
 		server       *http.Server
 		tcpaddr      *net.TCPAddr
+		err          error
 	)
 
 	httpServeMux.HandleFunc("/chat", ws_handleChat)
-	if tcpaddr, err := net.ResolveTCPAddr("tcp4", bind); err != nil {
+	if tcpaddr, err = net.ResolveTCPAddr("tcp4", bind); err != nil {
 		return err
 	}
 
-	if listener, err := net.ListenTCP("tcp4", tcpaddr); err != nil {
+	if listener, err = net.ListenTCP("tcp4", tcpaddr); err != nil {
 		return err
 	}
 
@@ -67,8 +68,8 @@ func ws_handleChat(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer ws.Close()
-
 	sess := globals.sessionStore.Create(ws, "")
+	appLogger.Info("%s session connected at %s", sess.sid, sess.remoteAddr)
 
 	go ws_writePump(sess)
 	ws_readPump(sess)
@@ -83,30 +84,27 @@ func ws_writePump(sess *Session) {
 	}()
 	for {
 		select {
+		case packet, ok := <-sess.stop:
+			if !ok {
+				ws_write(sess, websocket.CloseMessage, []byte{})
+				return
+			}
+			if packet != nil {
+				ws_write(sess, websocket.TextMessage, packet)
+			}
+			return
+			break
 		case packet, ok := <-sess.send:
 			if !ok {
 				// The hub closed the channel.
 				ws_write(sess, websocket.CloseMessage, []byte{})
 				return
 			}
-
 			sess.ws.SetWriteDeadline(time.Now().Add(writeWait))
-			w, err := sess.ws.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
+			if packet != nil {
+				ws_write(sess, websocket.TextMessage, packet)
 			}
-			w.Write(packet)
-
-			// Add queued chat messages to the current websocket message.
-			n := len(sess.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(packet)
-			}
-
-			if err := w.Close(); err != nil {
-				return
-			}
+			break
 		case <-ticker.C:
 			if err := ws_write(sess, websocket.PingMessage, []byte{}); err != nil {
 				return
@@ -123,15 +121,17 @@ func ws_readPump(sess *Session) {
 	sess.ws.SetReadLimit(maxMessageSize)
 	sess.ws.SetReadDeadline(time.Now().Add(pongWait))
 	sess.ws.SetPongHandler(func(string) error { sess.ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	sess.remoteAddr = sess.ws.RemoteAddr().String()
 	for {
-		_, message, err := sess.ws.ReadMessage()
+		_, raw, err := sess.ws.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				appLogger.Error("error: %s", err.Error())
 			}
 			break
+		} else {
+			sess.dispathRaw(raw)
 		}
-
 	}
 }
 
