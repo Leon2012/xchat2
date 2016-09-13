@@ -29,9 +29,14 @@ type Session struct {
 	send   chan []byte //send message
 	stop   chan []byte
 	detach chan string
+	subs   map[string]*Subscription // topic name -> Subscription
 
 	// Session ID
 	sid string
+}
+
+type Subscription struct {
+	uaChange chan<- string
 }
 
 //out message
