@@ -7,6 +7,7 @@ import (
 
 	"github.com/Leon2012/xchat2/libs/config"
 	"github.com/Leon2012/xchat2/libs/file"
+	"github.com/Leon2012/xchat2/store/db/mongo"
 )
 
 type Config struct {
@@ -24,6 +25,7 @@ type Config struct {
 		Addrs   []string
 		Servers []*Server
 	}
+	Dbconf mongo.MongoConfig
 }
 
 type Server struct {
